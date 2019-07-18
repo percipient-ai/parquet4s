@@ -4,6 +4,8 @@ import java.nio.file.Paths
 
 import com.google.common.io.Files
 import org.apache.hadoop.fs.Path
+import org.apache.parquet.filter2.compat.FilterCompat.Filter
+import org.apache.parquet.filter2.compat.FilterCompat.NOOP
 import org.apache.parquet.hadoop.{ParquetReader => HadoopParquetReader}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FlatSpec, Matchers}
@@ -13,7 +15,7 @@ object ParquetIterableSpec {
 
   case class TestRow(int: Int)
 
-  def testRecord(int: Int): RowParquetRecord = RowParquetRecord("int" -> int)
+  def  testRecord(int: Int): RowParquetRecord = RowParquetRecord("int" -> int)
 
   private lazy val path = new Path(Paths.get(Files.createTempDir().getAbsolutePath).toString)
   class TestReader extends HadoopParquetReader[RowParquetRecord](path, null)
@@ -30,16 +32,16 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(mock[TestReader])
 
-    ParquetReader.newParquetIterable[TestRow](builder, options).iterator should be(an[Iterator[_]])
+    ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator should be(an[Iterator[_]])
   }
 
   it should "build a new iterator with new reader every time called" in {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(mock[TestReader]).repeated(3)
 
-    ParquetReader.newParquetIterable[TestRow](builder, options).iterator should be(an[Iterator[_]])
-    ParquetReader.newParquetIterable[TestRow](builder, options).iterator should be(an[Iterator[_]])
-    ParquetReader.newParquetIterable[TestRow](builder, options).iterator should be(an[Iterator[_]])
+    ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator should be(an[Iterator[_]])
+    ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator should be(an[Iterator[_]])
+    ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator should be(an[Iterator[_]])
   }
 
   "hasNext" should "return false for empty resource" in {
@@ -49,7 +51,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    ParquetReader.newParquetIterable[TestRow](builder, options).iterator.hasNext should be(false)
+    ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator.hasNext should be(false)
   }
 
   it should "return true for single-record resource" in {
@@ -59,7 +61,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    ParquetReader.newParquetIterable[TestRow](builder, options).iterator.hasNext should be(true)
+    ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator.hasNext should be(true)
   }
 
   it should "call 'read' when it is called itself multiple times in sequence (and return false)" in {
@@ -69,7 +71,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options).iterator
+    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator
     iterator.hasNext should be(false)
     iterator.hasNext should be(false)
     iterator.hasNext should be(false)
@@ -82,7 +84,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options).iterator
+    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator
     iterator.hasNext should be(true)
     iterator.hasNext should be(true)
     iterator.hasNext should be(true)
@@ -95,7 +97,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    ParquetReader.newParquetIterable[TestRow](builder, options).iterator.next should be(TestRow(1))
+    ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator.next should be(TestRow(1))
   }
 
   it should "return row for single-record resource" in {
@@ -105,7 +107,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    a[NoSuchElementException] should be thrownBy ParquetReader.newParquetIterable[TestRow](builder, options).iterator.next
+    a[NoSuchElementException] should be thrownBy ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator.next
   }
 
   it should "try to read record only once in case of sequential calls for missing record" in {
@@ -115,7 +117,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options).iterator
+    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator
     a[NoSuchElementException] should be thrownBy iterator.next
     a[NoSuchElementException] should be thrownBy iterator.next
     a[NoSuchElementException] should be thrownBy iterator.next
@@ -131,7 +133,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options).iterator
+    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator
     iterator.next should be(TestRow(1))
     iterator.next should be(TestRow(2))
     iterator.next should be(TestRow(3))
@@ -145,7 +147,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options).iterator
+    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator
     iterator.hasNext should be(false)
     a[NoSuchElementException] should be thrownBy iterator.next
   }
@@ -157,7 +159,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options).iterator
+    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator
     iterator.hasNext should be(true)
     iterator.next should be(TestRow(1))
   }
@@ -170,7 +172,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options).iterator
+    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator
     iterator.hasNext should be(true)
     iterator.next should be(TestRow(1))
     iterator.hasNext should be(false)
@@ -186,7 +188,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options).iterator
+    val iterator = ParquetReader.newParquetIterable[TestRow](builder, options, NOOP).iterator
     iterator.hasNext should be(true)
     iterator.next should be(TestRow(1))
     iterator.hasNext should be(true)
@@ -202,7 +204,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader)
 
-    val iterable = ParquetReader.newParquetIterable[TestRow](builder, options)
+    val iterable = ParquetReader.newParquetIterable[TestRow](builder, options, NOOP)
     iterable.iterator
     iterable.close()
   }
@@ -214,7 +216,7 @@ class ParquetIterableSpec extends FlatSpec with Matchers with MockFactory {
     val builder = mock[TestBuilder]
     (builder.build _).expects().returns(reader).repeated(3)
 
-    val iterable = ParquetReader.newParquetIterable[TestRow](builder, options)
+    val iterable = ParquetReader.newParquetIterable[TestRow](builder, options, NOOP)
 
     iterable.iterator
     iterable.iterator

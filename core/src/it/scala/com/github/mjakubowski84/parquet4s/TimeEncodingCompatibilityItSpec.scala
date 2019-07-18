@@ -5,6 +5,7 @@ import java.util.TimeZone
 import com.github.mjakubowski84.parquet4s.CompatibilityTestCases.TimePrimitives
 import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 
+
 class TimeEncodingCompatibilityItSpec extends
   FlatSpec
     with Matchers
