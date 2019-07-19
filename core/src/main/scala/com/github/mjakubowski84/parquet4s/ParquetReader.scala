@@ -6,6 +6,8 @@ import java.util.TimeZone
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.parquet.hadoop.{ParquetReader => HadoopParquetReader}
+import org.apache.parquet.filter2.compat.FilterCompat.Filter
+import org.apache.parquet.filter2.compat.FilterCompat.NOOP
 
 /**
   * Type class that reads Parquet files from given path.
@@ -19,7 +21,7 @@ trait ParquetReader[T] {
     * @param options configuration of how Parquet files should be read
     * @return iterable collection of data read from path
     */
-  def read(path: String, options: ParquetReader.Options): ParquetIterable[T]
+  def read(path: String, options: ParquetReader.Options, filter: Filter): ParquetIterable[T]
 
 }
 
@@ -37,14 +39,16 @@ object ParquetReader {
   }
 
   @deprecated(message = "Please use read function or ParquetReader type class", since = "0.3.0")
-  def apply[T : ParquetRecordDecoder](path: String, options: Options = Options()): ParquetIterable[T] =
-    newParquetIterable(path, options)
+  def apply[T : ParquetRecordDecoder](path: String, options: Options = Options(), filter: Filter): ParquetIterable[T] =
+    newParquetIterable(path, options, filter)
 
-  private def newParquetIterable[T : ParquetRecordDecoder](path: String, options: Options): ParquetIterable[T] =
-    newParquetIterable(HadoopParquetReader.builder[RowParquetRecord](new ParquetReadSupport(), new Path(path)), options)
+  private def newParquetIterable[T : ParquetRecordDecoder](path: String, options: Options, filter: Filter = NOOP): ParquetIterable[T] =
+    newParquetIterable(HadoopParquetReader.builder[RowParquetRecord](new ParquetReadSupport(), new Path(path)), options, filter)
 
-  private[parquet4s] def newParquetIterable[T : ParquetRecordDecoder](builder: Builder, options: Options): ParquetIterable[T] =
-    new ParquetIterableImpl(builder, options)
+  private[parquet4s] def newParquetIterable[T : ParquetRecordDecoder](builder: Builder,
+                                                                      options: Options,
+                                                                      filter: Filter): ParquetIterable[T] =
+    new ParquetIterableImpl(builder.withFilter(filter), options)
 
   /**
     * Creates new [[ParquetIterable]] over data from given path.
@@ -59,14 +63,14 @@ object ParquetReader {
     * @tparam T type of data that represents the schema of the Parquet file, e.g.:
     *           {{{ case class MyData(id: Long, name: String, created: java.sql.Timestamp) }}}
     */
-  def read[T](path: String, options: Options = Options())(implicit reader: ParquetReader[T]): ParquetIterable[T] =
-    reader.read(path, options)
+  def read[T](path: String, options: Options = Options(), filter: Filter = NOOP)(implicit reader: ParquetReader[T]): ParquetIterable[T] =
+    reader.read(path, options, filter)
 
   /**
     * Default implementation of [[ParquetReader]].
     */
   implicit def reader[T : ParquetRecordDecoder]: ParquetReader[T] = new ParquetReader[T] {
-    override def read(path: String, options: Options = Options()): ParquetIterable[T] = newParquetIterable(path, options)
+    override def read(path: String, options: Options = Options(), filter: Filter): ParquetIterable[T] = newParquetIterable(path, options, filter)
   }
 
 }

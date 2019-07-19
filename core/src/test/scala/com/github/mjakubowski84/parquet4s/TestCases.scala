@@ -25,6 +25,9 @@ object TestCases {
                            )
   case class ContainsOption(optional: Option[Int])
 
+  // Simple test row
+  case class TestRow(s: String)
+
   // Collections of primitives
   case class Collections(
                           list: List[Int],
